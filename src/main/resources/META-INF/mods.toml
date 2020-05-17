@@ -1,0 +1,27 @@
+modLoader="javafml"
+loaderVersion="[31,)"
+issueTrackerURL="https://github.com/lo-fi-modding/no-recipes/issues"
+[[mods]]
+modId="no-recipes"
+version="${file.jarVersion}"
+displayName="No Recipes!"
+#TODO updateJSONURL="https://myurl.me/"
+displayURL="https://github.com/lo-fi-modding/no-recipes"
+#TODO logoFile="logo.png"
+credits="Corey Frenette (Monoxide)"
+authors="Corey Frenette"
+description='''
+Who needs 'em, anyway?
+'''
+[[dependencies.no-recipes]]
+  modId="forge"
+  mandatory=true
+  versionRange="[31.2,)"
+  ordering="NONE"
+  side="BOTH"
+[[dependencies.no-recipes]]
+  modId="minecraft"
+  mandatory=true
+  versionRange="[1.15.2]"
+  ordering="NONE"
+  side="BOTH"
