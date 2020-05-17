@@ -6,6 +6,7 @@ import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.IRecipeType;
 import net.minecraft.item.crafting.RecipeManager;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.Tuple;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -28,6 +30,7 @@ public class NoRecipesMod {
   public static final Logger LOGGER = LogManager.getLogger();
 
   private final List<Predicate<IRecipe<?>>> recipesToRemove = new ArrayList<>();
+  private final List<Tuple<Predicate<IRecipe<?>>, Function<IRecipe<?>, IRecipe<?>>>> recipesToReplace = new ArrayList<>();
 
   public NoRecipesMod() {
     Config.registerConfig();
@@ -41,6 +44,7 @@ public class NoRecipesMod {
 
   private void processIMC(final InterModProcessEvent event) {
     final Object2IntMap<String> removers = new Object2IntOpenHashMap<>();
+    final Object2IntMap<String> replacers = new Object2IntOpenHashMap<>();
 
     event.getIMCStream("remove_recipe"::equals).forEach(message -> {
       final Supplier<Predicate<IRecipe<?>>> predicate = message.getMessageSupplier();
@@ -48,8 +52,18 @@ public class NoRecipesMod {
       removers.mergeInt(message.getSenderModId(), 1, Integer::sum);
     });
 
+    event.getIMCStream("replace_recipe"::equals).forEach(message -> {
+      final Supplier<Tuple<Predicate<IRecipe<?>>, Function<IRecipe<?>, IRecipe<?>>>> predicate = message.getMessageSupplier();
+      this.recipesToReplace.add(predicate.get());
+      replacers.mergeInt(message.getSenderModId(), 1, Integer::sum);
+    });
+
     for(final Object2IntMap.Entry<String> entry : removers.object2IntEntrySet()) {
       LOGGER.info("{} registered {} recipe removers", entry.getKey(), entry.getIntValue());
+    }
+
+    for(final Object2IntMap.Entry<String> entry : replacers.object2IntEntrySet()) {
+      LOGGER.info("{} registered {} recipe replacers", entry.getKey(), entry.getIntValue());
     }
   }
 
@@ -70,7 +84,14 @@ public class NoRecipesMod {
         continue;
       }
 
-      recipes.computeIfAbsent(recipe.getType(), key -> new HashMap<>()).put(recipe.getId(), recipe);
+      IRecipe<?> newRecipe = recipe;
+      for(final Tuple<Predicate<IRecipe<?>>, Function<IRecipe<?>, IRecipe<?>>> tuple : this.recipesToReplace) {
+        if(tuple.getA().test(newRecipe)) {
+          newRecipe = tuple.getB().apply(newRecipe);
+        }
+      }
+
+      recipes.computeIfAbsent(newRecipe.getType(), key -> new HashMap<>()).put(newRecipe.getId(), newRecipe);
     }
 
     recipeManager.recipes = recipes;
