@@ -8,11 +8,12 @@ import net.minecraft.item.crafting.RecipeManager;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Tuple;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.world.RegisterDimensionsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
-import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -39,7 +40,7 @@ public class NoRecipesMod {
     modBus.addListener(this::processIMC);
 
     final IEventBus forgeBus = MinecraftForge.EVENT_BUS;
-    forgeBus.addListener(this::serverStarting);
+    forgeBus.addListener(this::assumeControl);
   }
 
   private void processIMC(final InterModProcessEvent event) {
@@ -67,7 +68,8 @@ public class NoRecipesMod {
     }
   }
 
-  private void serverStarting(final FMLServerStartingEvent event) {
+  // Not ideal, but this event fires at just the right time - after data packs are loaded, but before worlds
+  private void assumeControl(final RegisterDimensionsEvent event) {
     if(!Config.ENABLED.get()) {
       LOGGER.info("No Recipes! is disabled");
       return;
@@ -75,7 +77,7 @@ public class NoRecipesMod {
 
     LOGGER.info("No Recipes! is taking over the world");
 
-    final RecipeManager recipeManager = event.getServer().getRecipeManager();
+    final RecipeManager recipeManager = ServerLifecycleHooks.getCurrentServer().getRecipeManager();
 
     final Map<IRecipeType<?>, Map<ResourceLocation, IRecipe<?>>> recipes = new HashMap<>();
 
